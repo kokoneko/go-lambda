@@ -3,18 +3,18 @@ package event
 import (
 	"fmt"
 	"log"
-
+	"os"
+	"strings"
 	"bytes"
 	"image"
 	"image/jpeg"
 	"image/png"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
-
-const uploadBacketName = "lambda-resized299"
 
 func ExecResize(bucketName string, objectKey string) {
 	log.Println(fmt.Sprintf("画像リサイズ開始。対象オブジェクト: %s", objectKey))
@@ -56,13 +56,14 @@ func ExecResize(bucketName string, objectKey string) {
 	}
 
 	uploader := s3manager.NewUploader(sess)
+	uploadKey := strings.Replace(objectKey, os.Getenv("READ_PREFIX"), os.Getenv("UPLOAD_PREFIX"), 1)
 	_, err = uploader.Upload(&s3manager.UploadInput{
-		Bucket: aws.String(uploadBacketName),
-		Key: aws.String(objectKey),
+		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
+		Key: aws.String(uploadKey),
 		Body: buf,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(fmt.Sprintf("画像リサイズ完了。実施オブジェクト: %s", objectKey))
+	log.Println(fmt.Sprintf("画像リサイズ完了。実施オブジェクト: %s", uploadKey))
 }
