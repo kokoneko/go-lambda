@@ -9,11 +9,12 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
-
+	
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/disintegration/imaging"
 )
 
 func ExecResize(bucketName string, objectKey string) {
@@ -33,28 +34,46 @@ func ExecResize(bucketName string, objectKey string) {
 	body := obj.Body
 	defer body.Close()
 
+	// 元画像読み込み
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(body)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// 画像をimage.Image型にデコード
 	img, data, err := image.Decode(buf)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// 短辺の方に合わせて正方形にリサイズ
+    imgRectangle := img.Bounds()
+	size := imgRectangle.Max.X
+	if imgRectangle.Max.Y < size {
+		size = imgRectangle.Max.Y
+	}
+
+	triming := imaging.CropAnchor(img, size, size, imaging.Center)
+	resizedImg := imaging.Resize(triming, 300, 300, imaging.Lanczos)
+
+	// 画像のエンコード（書き込み）
 	switch data {
 	case "jpeg", "jpg":
-		if err := jpeg.Encode(buf, img, &jpeg.Options{Quality: 100}); err != nil {
+		if err := jpeg.Encode(buf, resizedImg, &jpeg.Options{Quality: 100}); err != nil {
 			log.Fatal(err)
 		}
 	case "png":
-		if err := png.Encode(buf, img); err != nil {
+		if err := png.Encode(buf, resizedImg); err != nil {
+			log.Fatal(err)
+		}
+	default:
+		if err := png.Encode(buf, resizedImg); err != nil {
 			log.Fatal(err)
 		}
 	}
 
+	// S3リサイズ画像用フォルダにアップロード
 	uploader := s3manager.NewUploader(sess)
 	uploadKey := strings.Replace(objectKey, os.Getenv("READ_PREFIX"), os.Getenv("UPLOAD_PREFIX"), 1)
 	_, err = uploader.Upload(&s3manager.UploadInput{
