@@ -9,12 +9,17 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
-	
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/disintegration/imaging"
+)
+
+const (
+	squarePrefix = "sq"
+	squareSize = 300
 )
 
 func ExecResize(bucketName string, objectKey string) {
@@ -55,7 +60,7 @@ func ExecResize(bucketName string, objectKey string) {
 	}
 
 	triming := imaging.CropAnchor(img, size, size, imaging.Center)
-	resizedImg := imaging.Resize(triming, 300, 300, imaging.Lanczos)
+	resizedImg := imaging.Resize(triming, squareSize, squareSize, imaging.Lanczos)
 
 	// 画像のエンコード（書き込み）
 	switch data {
@@ -75,10 +80,10 @@ func ExecResize(bucketName string, objectKey string) {
 
 	// S3リサイズ画像用フォルダにアップロード
 	uploader := s3manager.NewUploader(sess)
-	uploadKey := strings.Replace(objectKey, os.Getenv("READ_PREFIX"), os.Getenv("UPLOAD_PREFIX"), 1)
+	uploadKey := squarePrefix + strings.Replace(objectKey, os.Getenv("READ_PREFIX"), "", 1)
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(os.Getenv("S3_BUCKET_NAME")),
-		Key: aws.String(uploadKey),
+		Key: aws.String(os.Getenv("UPLOAD_PREFIX") + uploadKey),
 		Body: buf,
 	})
 	if err != nil {
