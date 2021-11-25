@@ -9,7 +9,7 @@ type S3Info struct {
 	Key  string
 }
 
-func S3lambda(event events.S3Event) *S3Info {
+func GetS3TrigerInfo(event events.S3Event) *S3Info {
 	for _, record := range event.Records {
 		return &S3Info {
 			Bucket: record.S3.Bucket.Name,
