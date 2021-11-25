@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 	"bytes"
-	"image"
 	"image/jpeg"
 	"image/png"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -46,8 +46,8 @@ func ExecResize(bucketName string, objectKey string) {
 		log.Fatal(err)
 	}
 
-	// 画像をimage.Image型にデコード
-	img, data, err := image.Decode(buf)
+	// 画像の向きを自動調整してデコード
+	img, err := imaging.Decode(buf, imaging.AutoOrientation(true))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,10 +60,11 @@ func ExecResize(bucketName string, objectKey string) {
 	}
 
 	triming := imaging.CropAnchor(img, size, size, imaging.Center)
-	resizedImg := imaging.Resize(triming, squareSize, squareSize, imaging.Lanczos)
+	resizedImg := imaging.Resize(triming, squareSize, squareSize, imaging.NearestNeighbor)
 
 	// 画像のエンコード（書き込み）
-	switch data {
+	ext := filepath.Ext(objectKey)
+	switch ext {
 	case "jpeg", "jpg":
 		if err := jpeg.Encode(buf, resizedImg, &jpeg.Options{Quality: 100}); err != nil {
 			log.Fatal(err)
