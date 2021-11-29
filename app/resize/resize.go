@@ -15,6 +15,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/disintegration/imaging"
+	"github.com/nfnt/resize"
+
+	// "gopkg.in/gographics/imagick.v3/imagick"
 )
 
 const (
@@ -60,7 +63,15 @@ func ExecResize(bucketName string, objectKey string) {
 	}
 
 	triming := imaging.CropAnchor(img, size, size, imaging.Center)
-	resizedImg := imaging.Resize(triming, squareSize, squareSize, imaging.NearestNeighbor)
+
+
+	// imagick.Initialize()
+	// defer imagick.Terminate()
+	// mw := imagick.NewMagickWand()
+	// defer mw.Destroy()
+
+
+	resizedImg := resize.Resize(squareSize, squareSize, triming, resize.Lanczos3)
 
 	// 画像のエンコード（書き込み）
 	ext := filepath.Ext(objectKey)
